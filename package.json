@@ -1,0 +1,14 @@
+{
+  "name": "jzq-sync-backend",
+  "version": "1.0.0",
+  "description": "教资简答题题库 —— 轻量同步后端（方案B）：托管前端 + /api/state 读写标注",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"require('./server.js')\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}
