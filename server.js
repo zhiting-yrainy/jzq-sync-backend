@@ -36,6 +36,17 @@ function readState() {
 }
 function writeState(obj) { fs.writeFileSync(DATA_FILE, JSON.stringify(obj)); }
 
+// 合并两份标注：不覆盖、只补充（added 按 id 去重并集，marks/edits 合并键）
+function mergeState(a, b) {
+  a = a || {}; b = b || {};
+  const marks = Object.assign({}, a.marks || {}, b.marks || {});
+  const edits = Object.assign({}, a.edits || {}, b.edits || {});
+  const map = {};
+  (a.added || []).forEach(q => { if (q && q.id != null) map[q.id] = q; });
+  (b.added || []).forEach(q => { if (q && q.id != null) map[q.id] = q; });
+  return { marks: marks, edits: edits, added: Object.keys(map).map(k => map[k]) };
+}
+
 const server = http.createServer((req, res) => {
   // 允许跨域（前端部署在别处时需用到）
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -64,9 +75,10 @@ const server = http.createServer((req, res) => {
           const incoming = JSON.parse(body);
           const cur = readState();
           const newUpdated = incoming.updatedAt || Date.now();
-          // last-write-wins：以时间戳较新者为准
+          // 时间戳较新才接受；接受时做「合并」而非整覆盖，保证任一侧的新增/标注都不丢
           if (newUpdated >= cur.updatedAt) {
-            writeState({ updatedAt: newUpdated, data: incoming.data || {} });
+            const merged = mergeState(cur.data, incoming.data || {});
+            writeState({ updatedAt: newUpdated, data: merged });
           }
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify(readState()));
